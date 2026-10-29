@@ -1,0 +1,58 @@
+{
+  "racingQueenslandEmail": "aclarke@racingqueensland.com.au",
+  "fromEmail": "no-reply@theultimatedriver.com.au",
+  "publicBaseUrl": "http://localhost:3000",
+  "maxUploadMB": 10,
+  "groups": [
+    {
+      "id": "herb-factor",
+      "name": "THE HERB FACTOR",
+      "managerEmail": ""
+    },
+    {
+      "id": "hart-attack",
+      "name": "The Hart Attack",
+      "managerEmail": ""
+    },
+    {
+      "id": "garrards",
+      "name": "Garrards, SEN and 1 Equine",
+      "managerEmail": ""
+    },
+    {
+      "id": "gloucester-park-gurus",
+      "name": "Gloucester Park Gurus",
+      "managerEmail": ""
+    },
+    {
+      "id": "lion-kings",
+      "name": "Lion Kings",
+      "managerEmail": ""
+    },
+    {
+      "id": "matchday-group",
+      "name": "Matchday Group",
+      "managerEmail": ""
+    },
+    {
+      "id": "jett-fuelled",
+      "name": "Jett Fuelled",
+      "managerEmail": ""
+    },
+    {
+      "id": "jamieson-and-drive",
+      "name": "Jamieson and Drive",
+      "managerEmail": ""
+    },
+    {
+      "id": "burchill-bloodstock",
+      "name": "Burchill Bloodstock",
+      "managerEmail": ""
+    },
+    {
+      "id": "creek-100-club",
+      "name": "The Creek 100 Club",
+      "managerEmail": ""
+    }
+  ]
+}

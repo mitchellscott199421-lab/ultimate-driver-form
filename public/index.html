@@ -1,0 +1,48 @@
+<!doctype html><html lang="en-AU"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Ultimate Driver 2027 – Party Registration</title><link rel="stylesheet" href="style.css"></head><body>
+<header><h1>THE <span>ULTIMATE</span> DRIVER 2027</h1>
+<div class="prize">$350,000</div>
+<div class="facts"><div>20 races over 2 nights</div><div>10 slots / drivers</div><div>The Creek, Albion Park</div><div>Fri 19 &amp; Sat 20 Feb 2027</div></div></header>
+<main>
+<form id="f" novalidate>
+<div class="card"><h2>Applicant Party Details</h2>
+<p class="hint">Every member of your slot group (each syndicate member, director or shareholder, including any company or trust) must complete this registration individually.</p>
+<label for="groupId">Your slot group *</label><select id="groupId" name="groupId" required><option value="">Select your group…</option></select>
+<label class="check"><input type="checkbox" name="isManager"> I am the Manager/Contact Person (Party 1) for my group</label></div>
+
+<div class="card"><h2>Your details</h2>
+<label for="fullName">Full legal name *</label><input type="text" id="fullName" name="fullName" autocomplete="name" required>
+<label for="dob">Date of birth *</label><input type="date" id="dob" name="dob">
+<label class="check"><input type="checkbox" id="dobNA" name="dobNA"> OR Not Applicable (company or trust)</label>
+<label for="address">Residential/registered address *</label><input type="text" id="address" name="address" autocomplete="street-address" required>
+<div class="row"><div><label for="postcode">Postcode *</label><input type="text" id="postcode" name="postcode" inputmode="numeric" maxlength="4" pattern="\d{4}" required></div>
+<div><label for="phone">Phone *</label><input type="tel" id="phone" name="phone" autocomplete="tel" required></div></div>
+<label for="email">Email *</label><input type="email" id="email" name="email" autocomplete="email" required></div>
+
+<div class="card"><h2>Identification</h2>
+<p class="hint">Upload a clear photo or scan of your driver's licence or passport. JPG, PNG, HEIC or PDF, max <span id="maxmb">10</span> MB. Stored privately and only shared with your slot manager and Racing Queensland via a secure link.</p>
+<input type="file" id="idDocument" name="idDocument" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.heic" required></div>
+
+<div class="card"><h2>Acknowledgement &amp; signature</h2>
+<p class="hint">By signing, I acknowledge and agree that:</p>
+<ul class="ack">
+<li>I have read and agree to be bound by the Ultimate Driver Terms and Conditions;</li>
+<li>the information I have provided is accurate, honest, true and correct, and I will promptly notify Racing Queensland of any changes;</li>
+<li>I have never committed an offence against the Racing Act or the Racing Integrity Act (or equivalent law in any other jurisdiction), an indictable offence or a summary offence involving dishonesty, fraud, stealing or unlawful betting, or an animal welfare offence;</li>
+<li>I will not do (or fail to do) anything that would bring the Race or Racing Queensland into disrepute;</li>
+<li>I consent to Racing Queensland undertaking a police check or other relevant background check on me;</li>
+<li>I consent to Racing Queensland dealing with my personal information in accordance with its Privacy Policy;</li>
+<li>I give consent and authority to the person nominated as Party 1 (Manager/Contact Person) to liaise with Racing Queensland on my behalf.</li></ul>
+<label>Signature * <span class="hint">(draw with your finger or mouse)</span></label>
+<canvas id="sig"></canvas><button type="button" class="btn sec" id="clear">Clear signature</button>
+<label for="signedDate">Date *</label><input type="date" id="signedDate" name="signedDate" required>
+<label class="check"><input type="checkbox" name="consent" id="consent" required> <span>I have read and agree to the <a href="terms.html" target="_blank">Terms and Conditions</a> and the acknowledgements above (Section 3).</span></label>
+</div>
+<details class="tc"><summary>Terms and Conditions</summary><div class="terms" id="terms">Loading…</div></details>
+<div class="errors" id="errs"></div>
+<button class="btn pri" id="submit">Submit registration</button>
+</form>
+<div class="card ok" id="done" hidden><h2>Registration received ✔</h2><p>Thanks! Your slot manager and Racing Queensland have been notified, and a confirmation has been emailed to you.</p><p>Reference: <b id="ref"></b></p><p id="warn" style="color:#b00020"></p></div>
+</main>
+<footer><a href="terms.html" target="_blank">Terms and Conditions</a> · Enquiries: Racing Queensland – aclarke@racingqueensland.com.au</footer>
+<script src="app.js"></script></body></html>

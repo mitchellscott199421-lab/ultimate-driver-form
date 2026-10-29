@@ -1,0 +1,5 @@
+node_modules
+private-data
+outbox
+config.local.json
+screenshots
