@@ -3,3 +3,4 @@ private-data
 outbox
 config.local.json
 screenshots
+server.log
