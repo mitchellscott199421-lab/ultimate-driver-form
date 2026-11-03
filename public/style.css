@@ -22,3 +22,4 @@ ul.ack{font-size:.88rem;padding-left:20px;margin:8px 0}details{margin-top:10px}s
 footer{text-align:center;font-size:.8rem;color:#5a6575;padding:20px}
 .admin{padding:16px}.admin table{border-collapse:collapse;width:100%;background:#fff}.admin td,.admin th{border:1px solid #dde3ea;padding:8px;font-size:.85rem;text-align:left}.admin select{max-width:300px}
 details.tc summary{font-weight:400;font-size:.85rem;color:#5a6575}footer a{color:#5a6575}
+.admin .bar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.admin .bar input{max-width:260px}.admin a.btn{text-decoration:none;display:inline-block}

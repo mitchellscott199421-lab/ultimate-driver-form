@@ -36,9 +36,10 @@ $('#f').onsubmit = async e => {
   const fd = new FormData(f); fd.append('signature', cv.toDataURL('image/png'));
   $('#submit').disabled = true; $('#submit').textContent = 'Submitting…';
   try {
-    const r = await (await fetch('/submit', { method: 'POST', body: fd })).json();
+    const resp = await fetch('/submit', { method: 'POST', body: fd });
+    let r; try { r = await resp.json(); } catch { r = { ok: false, errors: [resp.status === 413 ? 'File is too large (max 10 MB).' : 'Sorry, the server is busy or something went wrong. Your details are still on this page – please try again in a minute.'] }; }
     if (!r.ok) return showErr(r.errors);
     f.hidden = true; $('#done').hidden = false; $('#ref').textContent = r.id; if (r.warning) $('#warn').textContent = r.warning; scrollTo(0, 0);
-  } catch { showErr(['Network error – please try again.']); }
+  } catch { showErr(['Could not reach the server. Check your connection – your details are still on this page – and try again.']); }
   finally { $('#submit').disabled = false; $('#submit').textContent = 'Submit registration'; }
 };
