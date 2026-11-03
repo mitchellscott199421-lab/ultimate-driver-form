@@ -23,3 +23,7 @@ footer{text-align:center;font-size:.8rem;color:#5a6575;padding:20px}
 .admin{padding:16px}.admin table{border-collapse:collapse;width:100%;background:#fff}.admin td,.admin th{border:1px solid #dde3ea;padding:8px;font-size:.85rem;text-align:left}.admin select{max-width:300px}
 details.tc summary{font-weight:400;font-size:.85rem;color:#5a6575}footer a{color:#5a6575}
 .admin .bar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.admin .bar input{max-width:260px}.admin a.btn{text-decoration:none;display:inline-block}
+
+h1.logo{margin:0 auto 6px;line-height:0}h1.logo img{display:block;width:100%;max-width:420px;height:auto;margin:0 auto;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}h1.logo .yr{display:block;line-height:1.2;font-size:1.5rem;font-weight:800;letter-spacing:4px;color:var(--gold);margin-top:4px}
+header.slim{padding:14px 16px}.tlogo{display:block;width:100%;max-width:240px;height:auto;margin:0 auto}
+@media(max-width:480px){h1.logo img{max-width:300px}h1.logo .yr{font-size:1.2rem}}

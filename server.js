@@ -146,7 +146,7 @@ app.post('/submit', rateLimit, upload.single('idDocument'), async (req, res, nex
     const dupes = DUPES.get(dupKey(group.id, b.email)) || [];
     const rec = {
       id, submittedAt: new Date().toISOString(), groupId: group.id, groupName: group.name,
-      isManager: b.isManager === 'on', fullName: b.fullName.trim(), dob: b.dobNA === 'on' ? null : b.dob, dobNotApplicable: b.dobNA === 'on',
+      fullName: b.fullName.trim(), dob: b.dobNA === 'on' ? null : b.dob, dobNotApplicable: b.dobNA === 'on',
       address: b.address.trim(), postcode: b.postcode.trim(), phone: b.phone.trim(), email: b.email.trim(),
       signedDate: b.signedDate, consent: true,
       idDocument: { file: idFile, originalName: req.file.originalname, mimetype: kind.type, bytes: req.file.size },
@@ -157,15 +157,15 @@ app.post('/submit', rateLimit, upload.single('idDocument'), async (req, res, nex
     res.json({ ok: true, id, warning: dupes.length ? 'You have already registered for this group with this email. Your new registration has been saved as well; contact your slot manager if this was a mistake.' : null });
 
     // emails are queued after the response, so SMTP problems never affect the registration
-    const when = brisbane(rec.submittedAt), role = rec.isManager ? 'Yes – Party 1 Manager/Contact Person' : 'No';
+    const when = brisbane(rec.submittedAt);
     const dupNote = dupes.length ? `\nWARNING: possible duplicate – this email has already registered for ${rec.groupName} (${dupes.join(', ')}).\n` : '';
     const flags = (group.managerEmail ? '' : '[NO MANAGER SET] ') + (dupes.length ? '[POSSIBLE DUPLICATE] ' : '');
-    const full = `Slot group: ${rec.groupName}\nGroup manager/contact: ${role}\nFull legal name: ${rec.fullName}\nDate of birth: ${rec.dob || 'Not applicable (company/trust)'}\nAddress: ${rec.address} ${rec.postcode}\nPhone: ${rec.phone}\nEmail: ${rec.email}\nSigned: ${rec.signedDate}\nRegistered: ${when}\nConsent to T&Cs and Section 3 acknowledgements: Yes\nReference: ${id}`;
+    const full = `Slot group: ${rec.groupName}\nFull legal name: ${rec.fullName}\nDate of birth: ${rec.dob || 'Not applicable (company/trust)'}\nAddress: ${rec.address} ${rec.postcode}\nPhone: ${rec.phone}\nEmail: ${rec.email}\nSigned: ${rec.signedDate}\nRegistered: ${when}\nConsent to T&Cs and Section 3 acknowledgements: Yes\nReference: ${id}`;
     const jobs = [];
     if (c.racingQueenslandEmail) jobs.push({ to: c.racingQueenslandEmail, subject: `${flags}Ultimate Driver 2027 – new party registration: ${rec.fullName} (${rec.groupName})`,
       text: `A new Section 2 party registration has been received.\n\n${full}\n\nLicence/passport and signature (secure link, expires in ${LINK_DAYS} days, do not forward). Fresh links are always available in the admin page (${BASE}/admin):\n${BASE}/files/${id}?t=${tokenFor(id)}\n${dupNote}${group.managerEmail ? '' : `\nNOTE: no slot manager email is set for ${rec.groupName} yet, so the manager has not been notified. Once known, add it to GROUPS_JSON on the host; earlier registrations are not re-sent.\n`}` });
     if (group.managerEmail) jobs.push({ to: group.managerEmail, subject: `Ultimate Driver 2027 – ${rec.fullName} has registered for ${rec.groupName}`,
-      text: `A member of your slot group has registered.\n\nName: ${rec.fullName}\nGroup: ${rec.groupName}\nPhone: ${rec.phone}\nEmail: ${rec.email}\nGroup manager/contact: ${role}\nRegistered: ${when}\n${dupes.length ? '\nNote: this email address has registered for your group before.\n' : ''}\nID documents are held securely by Racing Queensland and are not shared with slot managers.\n` });
+      text: `A member of your slot group has registered.\n\nName: ${rec.fullName}\nGroup: ${rec.groupName}\nPhone: ${rec.phone}\nEmail: ${rec.email}\nRegistered: ${when}\n${dupes.length ? '\nNote: this email address has registered for your group before.\n' : ''}\nID documents are held securely by Racing Queensland and are not shared with slot managers.\n` });
     jobs.push({ to: rec.email, subject: 'Your Ultimate Driver 2027 registration has been received',
       text: `Hi ${rec.fullName},\n\nThanks for registering as a party to ${rec.groupName} for The Ultimate Driver 2027 (The Creek, Albion Park, Fri 19 & Sat 20 Feb 2027).\n\nYour reference is ${id}. Racing Queensland has received your registration${group.managerEmail ? ' and your slot manager has been notified' : ''}.\n\nSummary:\n${full}\n\nIf anything is incorrect, please contact your slot manager or Racing Queensland (${c.racingQueenslandEmail}).\n` });
     for (const j of jobs) queueMail(j).catch(e => console.error('[mail] queue failed', e));
@@ -203,11 +203,11 @@ function filtered(q) {
   return [...REGS.values()].filter(r => (!q.group || r.groupId === q.group) && (!s || r.fullName.toLowerCase().includes(s) || r.email.toLowerCase().includes(s)))
     .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
 }
-const COLS = [['id', 'Reference'], ['registeredBrisbane', 'Registered (Brisbane time)'], ['groupName', 'Group'], ['isManager', 'Group manager/contact'], ['fullName', 'Full legal name'],
+const COLS = [['id', 'Reference'], ['registeredBrisbane', 'Registered (Brisbane time)'], ['groupName', 'Group'], ['fullName', 'Full legal name'],
   ['dob', 'Date of birth'], ['address', 'Address'], ['postcode', 'Postcode'], ['phone', 'Phone'], ['email', 'Email'], ['signedDate', 'Signed date'], ['consent', 'Consent'],
   ['licenceFile', 'Licence file (original name)'], ['licenceType', 'Licence file type'], ['possibleDuplicateOf', 'Possible duplicate of']];
 const csvCell = v => { let s = String(v ?? ''); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-const csvRow = r => COLS.map(([k]) => csvCell({ ...r, registeredBrisbane: brisbane(r.submittedAt), isManager: r.isManager ? 'Yes' : 'No', dob: r.dob || 'N/A',
+const csvRow = r => COLS.map(([k]) => csvCell({ ...r, registeredBrisbane: brisbane(r.submittedAt), dob: r.dob || 'N/A',
   consent: r.consent ? 'Yes' : 'No', licenceFile: r.idDocument.originalName, licenceType: r.idDocument.mimetype, possibleDuplicateOf: (r.possibleDuplicateOf || []).join(' ') }[k])).join(',');
 const stamp = () => new Date().toLocaleString('sv-SE', { timeZone: 'Australia/Brisbane' }).replace(/[: ]/g, '-').slice(0, 16);
 
@@ -219,7 +219,7 @@ app.get('/admin', adminAuth, async (req, res) => {
   const pendJobs = await Promise.all(pend.slice(0, 20).map(f => fsp.readFile(path.join(DIRS.mailPending, f)).then(JSON.parse).catch(() => null)));
   const mailRows = [...failedJobs.filter(Boolean).map(j => ['FAILED', j]), ...pendJobs.filter(j => j && j.attempts).map(j => ['retrying', j])]
     .map(([s, j]) => `<tr><td>${s}</td><td>${esc(j.msg.to)}</td><td>${esc(j.msg.subject)}</td><td>${j.attempts}</td><td>${esc(j.errors.at(-1))}</td></tr>`).join('');
-  const rows = recs.slice(0, 500).map(r => `<tr><td>${esc(brisbane(r.submittedAt))}</td><td>${esc(r.groupName)}</td><td>${esc(r.fullName)}${r.isManager ? ' <b>(Manager)</b>' : ''}${r.possibleDuplicateOf?.length ? ' <b style=color:#b00020>(possible duplicate)</b>' : ''}</td><td>${esc(r.email)}<br>${esc(r.phone)}</td><td>${esc(r.dob || 'N/A')}</td><td><a href="/files/${r.id}?t=${tokenFor(r.id)}" target=_blank>View</a></td></tr>`).join('');
+  const rows = recs.slice(0, 500).map(r => `<tr><td>${esc(brisbane(r.submittedAt))}</td><td>${esc(r.groupName)}</td><td>${esc(r.fullName)}${r.possibleDuplicateOf?.length ? ' <b style=color:#b00020>(possible duplicate)</b>' : ''}</td><td>${esc(r.email)}<br>${esc(r.phone)}</td><td>${esc(r.dob || 'N/A')}</td><td><a href="/files/${r.id}?t=${tokenFor(r.id)}" target=_blank>View</a></td></tr>`).join('');
   const opts = CFG.groups.map(g => `<option value="${esc(g.id)}" ${g.id === req.query.group ? 'selected' : ''}>${esc(g.name)} (${all.filter(r => r.groupId === g.id).length})${g.managerEmail ? '' : ' – no manager email'}</option>`).join('');
   res.send(`<!doctype html><meta name=viewport content="width=device-width"><meta name=robots content=noindex><title>Registrations</title><link rel=stylesheet href="/style.css"><body class=admin>
   <h1>Registrations (${all.length})</h1>

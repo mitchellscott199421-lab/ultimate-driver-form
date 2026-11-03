@@ -7,7 +7,7 @@ Each registrant picks their group, enters their details, uploads a licence/passp
 | Recipient | Contents |
 |---|---|
 | Racing Queensland (`RQ_EMAIL`) | Full details + secure link to licence & signature (link expires after 30 days; `/admin` always makes fresh links) |
-| Slot manager (`managerEmail` of the group) | Name, group, phone, email, whether they are the group manager/contact, date/time. **No** DOB, address, licence or signature |
+| Slot manager (`managerEmail` of the group) | Name, group, phone, email, date/time. **No** DOB, address, licence or signature |
 | Registrant | Confirmation with their own details and reference |
 
 If a group has no `managerEmail` yet, the registration is still saved and RQ is emailed (subject starts `[NO MANAGER SET]`).
