@@ -11,7 +11,8 @@
 
 <div class="card"><h2>Your details</h2>
 <label for="fullName">Full legal name *</label><input type="text" id="fullName" name="fullName" autocomplete="name" required>
-<label for="dob">Date of birth *</label><input type="date" id="dob" name="dob">
+<label for="dobD">Date of birth (day / month / year) *</label>
+<div class="dobrow" id="dobrow"><select id="dobD" aria-label="Day"><option value="">Day</option></select><select id="dobM" aria-label="Month"><option value="">Month</option></select><select id="dobY" aria-label="Year"><option value="">Year</option></select></div><input type="hidden" id="dob" name="dob">
 <label class="check"><input type="checkbox" id="dobNA" name="dobNA"> OR Not Applicable (company or trust)</label>
 <label for="address">Residential/registered address *</label><input type="text" id="address" name="address" autocomplete="street-address" required>
 <div class="row"><div><label for="postcode">Postcode *</label><input type="text" id="postcode" name="postcode" inputmode="numeric" maxlength="4" pattern="\d{4}" required></div>
@@ -34,7 +35,7 @@
 <li>I give consent and authority to the person nominated as Party 1 (Manager/Contact Person) to liaise with Racing Queensland on my behalf.</li></ul>
 <label>Signature * <span class="hint">(draw with your finger or mouse)</span></label>
 <canvas id="sig"></canvas><button type="button" class="btn sec" id="clear">Clear signature</button>
-<label for="signedDate">Date *</label><input type="date" id="signedDate" name="signedDate" required>
+<label for="signedDateShow">Date (filled in automatically)</label><input type="text" id="signedDateShow" readonly tabindex="-1" aria-readonly="true" class="locked">
 <label class="check"><input type="checkbox" name="consent" id="consent" required> <span>I have read and agree to the <a href="terms.html" target="_blank">Terms and Conditions</a> and the acknowledgements above (Section 3).</span></label>
 </div>
 <details class="tc"><summary>Terms and Conditions</summary><div class="terms" id="terms">Loading…</div></details>

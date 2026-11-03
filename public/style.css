@@ -27,3 +27,7 @@ details.tc summary{font-weight:400;font-size:.85rem;color:#5a6575}footer a{color
 h1.logo{margin:0 auto 6px;line-height:0}h1.logo img{display:block;width:100%;max-width:420px;height:auto;margin:0 auto;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}h1.logo .yr{display:block;line-height:1.2;font-size:1.5rem;font-weight:800;letter-spacing:4px;color:var(--gold);margin-top:4px}
 header.slim{padding:14px 16px}.tlogo{display:block;width:100%;max-width:240px;height:auto;margin:0 auto}
 @media(max-width:480px){h1.logo img{max-width:300px}h1.logo .yr{font-size:1.2rem}}
+
+.dobrow{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:8px}
+.dobrow select{width:100%}
+input.locked{background:#eef0f3;color:#444;cursor:not-allowed}

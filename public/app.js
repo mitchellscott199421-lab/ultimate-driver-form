@@ -3,8 +3,15 @@ let MAXMB = 10;
 fetch('/api/groups').then(r => r.json()).then(gs => gs.forEach(g => $('#groupId').add(new Option(g.name, g.id))));
 fetch('/api/config').then(r => r.json()).then(c => { MAXMB = c.maxUploadMB; $('#maxmb').textContent = MAXMB; });
 fetch('terms.txt').then(r => r.text()).then(t => $('#terms').textContent = t);
-const d = new Date(); $('#signedDate').value = new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
-$('#dobNA').onchange = e => { $('#dob').disabled = e.target.checked; if (e.target.checked) $('#dob').value = ''; };
+// Signature date: shown read-only as d/m/yyyy (Brisbane); the server sets the real date.
+$('#signedDateShow').value = new Date().toLocaleDateString('en-AU', { timeZone: 'Australia/Brisbane', day: '2-digit', month: '2-digit', year: 'numeric' });
+// Date of birth: day / month / year drop-downs
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+for (let i = 1; i <= 31; i++) $('#dobD').add(new Option(i, i));
+MONTHS.forEach((m, i) => $('#dobM').add(new Option(m, i + 1)));
+for (let y = new Date().getFullYear() - 16; y >= 1900; y--) $('#dobY').add(new Option(y, y));
+const dobIso = () => { const d = +$('#dobD').value, m = +$('#dobM').value, y = +$('#dobY').value; if (!d || !m || !y) return ''; const t = new Date(Date.UTC(y, m - 1, d)); if (t.getUTCDate() !== d || t.getUTCMonth() !== m - 1) return 'invalid'; return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; };
+$('#dobNA').onchange = e => { for (const id of ['#dobD', '#dobM', '#dobY']) { $(id).disabled = e.target.checked; if (e.target.checked) $(id).value = ''; } };
 
 // signature pad
 const cv = $('#sig'), ctx = cv.getContext('2d'); let drawing = false, signed = false;
@@ -21,7 +28,9 @@ $('#f').onsubmit = async e => {
   e.preventDefault(); const f = e.target, errs = [];
   if (!f.groupId.value) errs.push('Please select your slot group.');
   if (!f.fullName.value.trim()) errs.push('Full legal name is required.');
-  if (!f.dobNA.checked && !f.dob.value) errs.push('Date of birth is required (or tick Not Applicable).');
+  const iso = f.dobNA.checked ? '' : dobIso(); f.dob.value = iso === 'invalid' ? '' : iso;
+  if (!f.dobNA.checked && iso === 'invalid') errs.push('That date of birth is not a real date.');
+  else if (!f.dobNA.checked && !iso) errs.push('Date of birth is required (day, month and year), or tick Not Applicable.');
   if (!f.address.value.trim()) errs.push('Address is required.');
   if (!/^\d{4}$/.test(f.postcode.value.trim())) errs.push('Postcode must be 4 digits.');
   if (!f.phone.value.trim()) errs.push('Phone is required.');
@@ -30,7 +39,6 @@ $('#f').onsubmit = async e => {
   if (!file) errs.push("Please upload your driver's licence or passport.");
   else { if (!/\.(jpe?g|png|heic|heif|pdf)$/i.test(file.name)) errs.push('Licence/passport must be JPG, PNG, HEIC or PDF.'); if (file.size > MAXMB * 1048576) errs.push(`File is too large (max ${MAXMB} MB).`); }
   if (!signed) errs.push('Please sign in the signature box.');
-  if (!f.signedDate.value) errs.push('Signature date is required.');
   if (!f.consent.checked) errs.push('You must agree to the Terms and Conditions and acknowledgements.');
   showErr(errs); if (errs.length) return;
   const fd = new FormData(f); fd.append('signature', cv.toDataURL('image/png'));
