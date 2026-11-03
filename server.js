@@ -122,10 +122,10 @@ app.post('/submit', rateLimit, upload.single('idDocument'), async (req, res, nex
     const b = req.body || {}, c = CFG, errs = [];
     const group = c.groups.find(g => g.id === b.groupId);
     if (!group) errs.push('Please select your slot group.');
-    for (const [k, l] of [['fullName', 'Full legal name'], ['address', 'Residential/registered address'], ['postcode', 'Postcode'], ['phone', 'Phone'], ['email', 'Email']])
+    for (const [k, l] of [['fullName', 'Full legal name'], ['address', 'Residential address'], ['postcode', 'Postcode'], ['phone', 'Phone'], ['email', 'Email']])
       if (!String(b[k] || '').trim()) errs.push(`${l} is required.`);
     for (const k of ['fullName', 'address', 'phone', 'email']) if (String(b[k] || '').length > 300) errs.push(`${k} is too long.`);
-    if (b.dobNA !== 'on' && !/^\d{4}-\d{2}-\d{2}$/.test(b.dob || '')) errs.push('Date of birth is required (or tick Not Applicable).');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(b.dob || '')) errs.push('Date of birth is required.');
     if (b.postcode && !/^\d{4}$/.test(b.postcode.trim())) errs.push('Postcode must be 4 digits.');
     if (b.email && !emailOk(b.email.trim())) errs.push('Email address looks invalid.');
     let kind = null;
@@ -148,7 +148,7 @@ app.post('/submit', rateLimit, upload.single('idDocument'), async (req, res, nex
     const dupes = DUPES.get(dupKey(group.id, b.email)) || [];
     const rec = {
       id, submittedAt: new Date().toISOString(), groupId: group.id, groupName: group.name,
-      fullName: b.fullName.trim(), dob: b.dobNA === 'on' ? null : b.dob, dobNotApplicable: b.dobNA === 'on',
+      fullName: b.fullName.trim(), dob: b.dob,
       address: b.address.trim(), postcode: b.postcode.trim(), phone: b.phone.trim(), email: b.email.trim(),
       signedDate: todayBrisbane(), consent: true,
       idDocument: { file: idFile, originalName: req.file.originalname, mimetype: kind.type, bytes: req.file.size },
@@ -162,7 +162,7 @@ app.post('/submit', rateLimit, upload.single('idDocument'), async (req, res, nex
     const when = brisbane(rec.submittedAt);
     const dupNote = dupes.length ? `\nWARNING: possible duplicate – this email has already registered for ${rec.groupName} (${dupes.join(', ')}).\n` : '';
     const flags = (group.managerEmail ? '' : '[NO MANAGER SET] ') + (dupes.length ? '[POSSIBLE DUPLICATE] ' : '');
-    const full = `Slot group: ${rec.groupName}\nFull legal name: ${rec.fullName}\nDate of birth: ${rec.dob ? dmy(rec.dob) : 'Not applicable (company/trust)'}\nAddress: ${rec.address} ${rec.postcode}\nPhone: ${rec.phone}\nEmail: ${rec.email}\nSigned: ${dmy(rec.signedDate)}\nRegistered: ${when}\nConsent to T&Cs and Section 3 acknowledgements: Yes\nReference: ${id}`;
+    const full = `Slot group: ${rec.groupName}\nFull legal name: ${rec.fullName}\nDate of birth: ${rec.dob ? dmy(rec.dob) : 'N/A'}\nAddress: ${rec.address} ${rec.postcode}\nPhone: ${rec.phone}\nEmail: ${rec.email}\nSigned: ${dmy(rec.signedDate)}\nRegistered: ${when}\nConsent to T&Cs and Section 3 acknowledgements: Yes\nReference: ${id}`;
     const jobs = [];
     if (c.racingQueenslandEmail) jobs.push({ to: c.racingQueenslandEmail, subject: `${flags}Ultimate Driver 2027 – new party registration: ${rec.fullName} (${rec.groupName})`,
       text: `A new Section 2 party registration has been received.\n\n${full}\n\nLicence/passport and signature (secure link, expires in ${LINK_DAYS} days, do not forward). Fresh links are always available in the admin page (${BASE}/admin):\n${BASE}/files/${id}?t=${tokenFor(id)}\n${dupNote}${group.managerEmail ? '' : `\nNOTE: no slot manager email is set for ${rec.groupName} yet, so the manager has not been notified. Once known, add it to GROUPS_JSON on the host; earlier registrations are not re-sent.\n`}` });

@@ -6,15 +6,14 @@
 <main>
 <form id="f" novalidate>
 <div class="card"><h2>Applicant Party Details</h2>
-<p class="hint">Every member of your slot group (each syndicate member, director or shareholder, including any company or trust) must complete this registration individually.</p>
+<p class="hint">Every member of your slot group (each syndicate member) must complete this registration individually.</p>
 <label for="groupId">Your slot group *</label><select id="groupId" name="groupId" required><option value="">Select your group…</option></select></div>
 
 <div class="card"><h2>Your details</h2>
 <label for="fullName">Full legal name *</label><input type="text" id="fullName" name="fullName" autocomplete="name" required>
 <label for="dobD">Date of birth (day / month / year) *</label>
 <div class="dobrow" id="dobrow"><select id="dobD" aria-label="Day"><option value="">Day</option></select><select id="dobM" aria-label="Month"><option value="">Month</option></select><select id="dobY" aria-label="Year"><option value="">Year</option></select></div><input type="hidden" id="dob" name="dob">
-<label class="check"><input type="checkbox" id="dobNA" name="dobNA"> OR Not Applicable (company or trust)</label>
-<label for="address">Residential/registered address *</label><input type="text" id="address" name="address" autocomplete="street-address" required>
+<label for="address">Residential address *</label><input type="text" id="address" name="address" autocomplete="street-address" required>
 <div class="row"><div><label for="postcode">Postcode *</label><input type="text" id="postcode" name="postcode" inputmode="numeric" maxlength="4" pattern="\d{4}" required></div>
 <div><label for="phone">Phone *</label><input type="tel" id="phone" name="phone" autocomplete="tel" required></div></div>
 <label for="email">Email *</label><input type="email" id="email" name="email" autocomplete="email" required></div>

@@ -11,7 +11,6 @@ for (let i = 1; i <= 31; i++) $('#dobD').add(new Option(i, i));
 MONTHS.forEach((m, i) => $('#dobM').add(new Option(m, i + 1)));
 for (let y = new Date().getFullYear() - 16; y >= 1900; y--) $('#dobY').add(new Option(y, y));
 const dobIso = () => { const d = +$('#dobD').value, m = +$('#dobM').value, y = +$('#dobY').value; if (!d || !m || !y) return ''; const t = new Date(Date.UTC(y, m - 1, d)); if (t.getUTCDate() !== d || t.getUTCMonth() !== m - 1) return 'invalid'; return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; };
-$('#dobNA').onchange = e => { for (const id of ['#dobD', '#dobM', '#dobY']) { $(id).disabled = e.target.checked; if (e.target.checked) $(id).value = ''; } };
 
 // signature pad
 const cv = $('#sig'), ctx = cv.getContext('2d'); let drawing = false, signed = false;
@@ -28,9 +27,9 @@ $('#f').onsubmit = async e => {
   e.preventDefault(); const f = e.target, errs = [];
   if (!f.groupId.value) errs.push('Please select your slot group.');
   if (!f.fullName.value.trim()) errs.push('Full legal name is required.');
-  const iso = f.dobNA.checked ? '' : dobIso(); f.dob.value = iso === 'invalid' ? '' : iso;
-  if (!f.dobNA.checked && iso === 'invalid') errs.push('That date of birth is not a real date.');
-  else if (!f.dobNA.checked && !iso) errs.push('Date of birth is required (day, month and year), or tick Not Applicable.');
+  const iso = dobIso(); f.dob.value = iso === 'invalid' ? '' : iso;
+  if (iso === 'invalid') errs.push('That date of birth is not a real date.');
+  else if (!iso) errs.push('Date of birth is required (day, month and year).');
   if (!f.address.value.trim()) errs.push('Address is required.');
   if (!/^\d{4}$/.test(f.postcode.value.trim())) errs.push('Postcode must be 4 digits.');
   if (!f.phone.value.trim()) errs.push('Phone is required.');
