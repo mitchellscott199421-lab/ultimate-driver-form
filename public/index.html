@@ -20,7 +20,9 @@
 
 <div class="card"><h2>Identification</h2>
 <p class="hint">Upload a clear photo or scan of your driver's licence or passport. JPG, PNG, HEIC or PDF, max <span id="maxmb">10</span> MB. Stored privately and only accessible to Racing Queensland.</p>
-<input type="file" id="idDocument" name="idDocument" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.heic" required></div>
+<input type="file" id="idDocument" name="idDocument" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.heic" required>
+<div class="camrow"><button type="button" class="btn sec" id="takePhoto">📷 Take a photo with your camera</button><span id="camName" class="hint"></span></div>
+<input type="file" id="idCam" accept="image/*" capture="environment" hidden></div>
 
 <div class="card"><h2>Acknowledgement &amp; signature</h2>
 <p class="hint">By signing, I acknowledge and agree that:</p>

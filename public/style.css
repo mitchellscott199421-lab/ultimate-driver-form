@@ -31,3 +31,4 @@ header.slim{padding:14px 16px}.tlogo{display:block;width:100%;max-width:240px;he
 .dobrow{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:8px}
 .dobrow select{width:100%}
 input.locked{background:#eef0f3;color:#444;cursor:not-allowed}
+.camrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}

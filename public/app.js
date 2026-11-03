@@ -50,3 +50,8 @@ $('#f').onsubmit = async e => {
   } catch { showErr(['Could not reach the server. Check your connection – your details are still on this page – and try again.']); }
   finally { $('#submit').disabled = false; $('#submit').textContent = 'Submit registration'; }
 };
+
+// "Take a photo" button: opens the phone camera, then puts the photo into the normal upload field
+$('#takePhoto').onclick = () => $('#idCam').click();
+$('#idCam').onchange = e => { const fl = e.target.files[0]; if (!fl) return; const dt = new DataTransfer(); dt.items.add(fl); $('#idDocument').files = dt.files; $('#camName').textContent = 'Photo added: ' + fl.name; };
+$('#idDocument').addEventListener('change', () => { $('#camName').textContent = ''; });
