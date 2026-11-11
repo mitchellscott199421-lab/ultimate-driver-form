@@ -71,10 +71,44 @@ function rateLimit(req, res, next) {
 }
 
 // ---- email queue: jobs on disk, background worker with retries; never blocks a registration ----
-const smtp = process.env.SMTP_HOST ? nodemailer.createTransport({
+// Prefer Brevo's HTTPS API when BREVO_API_KEY is set (Render's free plan blocks outbound SMTP ports).
+const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+const BREVO_API_URL = process.env.BREVO_API_URL || 'https://api.brevo.com/v3/smtp/email';
+const mailConfigured = !!(BREVO_API_KEY || process.env.SMTP_HOST);
+const smtp = !BREVO_API_KEY && process.env.SMTP_HOST ? nodemailer.createTransport({
   host: process.env.SMTP_HOST, port: +(process.env.SMTP_PORT || 587), secure: process.env.SMTP_SECURE === 'true',
   auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined, pool: true, maxConnections: 3
 }) : null;
+function parseFrom(from) {
+  const s = String(from || '').trim();
+  const m = /^(.+?)\s*<([^<>]+)>$/.exec(s);
+  if (m) { const name = m[1].trim().replace(/^["']|["']$/g, '').trim(); return name ? { name, email: m[2].trim() } : { email: m[2].trim() }; }
+  return { email: s };
+}
+function toRecipients(to) {
+  const list = Array.isArray(to) ? to : String(to || '').split(',');
+  return list.map(x => (typeof x === 'string' ? x.trim() : x && (x.address || x.email) || '')).filter(Boolean).map(email => ({ email }));
+}
+async function sendViaBrevo(msg) {
+  const body = { sender: parseFrom(msg.from), to: toRecipients(msg.to), subject: msg.subject || '' };
+  if (msg.text) body.textContent = msg.text;
+  if (msg.html) body.htmlContent = msg.html;
+  if (msg.replyTo) {
+    const r = Array.isArray(msg.replyTo) ? msg.replyTo[0] : msg.replyTo;
+    body.replyTo = (r && typeof r === 'object') ? { ...(r.name ? { name: r.name } : {}), email: r.email || r.address } : parseFrom(r);
+  }
+  if (msg.attachments?.length) {
+    body.attachment = [];
+    for (const a of msg.attachments) body.attachment.push({ name: a.filename, content: (await fsp.readFile(a.path)).toString('base64') });
+  }
+  const res = await fetch(BREVO_API_URL, {
+    method: 'POST', headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  if (res.status < 200 || res.status >= 300) throw new Error(`Brevo API ${res.status}: ${text.slice(0, 1000)}`);
+  return text;
+}
 const MAIL_MAX_ATTEMPTS = 5;
 async function queueMail(msg, meta = {}) {
   const id = `${Date.now()}-${crypto.randomBytes(5).toString('hex')}`;
@@ -82,7 +116,7 @@ async function queueMail(msg, meta = {}) {
   setImmediate(mailWorker);
   return id;
 }
-// Registration files are deleted only after the RQ email (which carries them) was really sent over SMTP.
+// Registration files are deleted only after the RQ email (which carries them) was really sent (Brevo API or SMTP).
 async function afterRqSent(job) {
   if (!EMAIL_ONLY || !job.regId) return;
   await fsp.rm(regDir(job.regId), { recursive: true, force: true });
@@ -97,20 +131,21 @@ async function mailWorker() {
       const p = path.join(DIRS.mailPending, f); let job; try { job = JSON.parse(await fsp.readFile(p)); } catch { continue; }
       if (job.nextAt > Date.now()) continue;
       job.msg.from = CFG.fromEmail;
-      // RQ email with no SMTP: never mark it "sent" – hold it (and the files) until SMTP is configured
-      if (!smtp && job.rq) {
+      // RQ email with no mail configured: never mark it "sent" – hold it (and the files) until BREVO_API_KEY or SMTP is set
+      if (!mailConfigured && job.rq) {
         if (!job.held) {
           await fsp.writeFile(path.join(DIRS.outbox, job.id + '.txt'), `From: ${job.msg.from}\nTo: ${job.msg.to}\nSubject: ${job.msg.subject}\nAttachments: ${(job.msg.attachments || []).map(a => a.filename).join(', ')}\n\n${job.msg.text}\n`);
           job.held = new Date().toISOString();
         }
-        console.error(`[mail] *** RQ EMAIL NOT SENT – SMTP NOT CONFIGURED *** ${job.regId || job.id} "${job.msg.subject}" is held in ${DIRS.mailPending} with its files; set SMTP_* and it will send.`);
+        console.error(`[mail] *** RQ EMAIL NOT SENT – MAIL NOT CONFIGURED *** ${job.regId || job.id} "${job.msg.subject}" is held in ${DIRS.mailPending} with its files; set BREVO_API_KEY or SMTP_* and it will send.`);
         job.nextAt = Date.now() + 5 * 60000; await writeAtomic(p, JSON.stringify(job)); continue;
       }
       try {
         if (job.msg.attachments) for (const a of job.msg.attachments) await fsp.access(a.path); // files must still be there
-        if (smtp) await smtp.sendMail(job.msg);
-        else await fsp.writeFile(path.join(DIRS.outbox, job.id + '.txt'), `From: ${job.msg.from}\nTo: ${job.msg.to}\nSubject: ${job.msg.subject}\n\n${job.msg.text}\n`);
-        job.sentAt = new Date().toISOString(); job.via = smtp ? 'smtp' : 'outbox';
+        if (BREVO_API_KEY) { await sendViaBrevo(job.msg); job.via = 'brevo-api'; }
+        else if (smtp) { await smtp.sendMail(job.msg); job.via = 'smtp'; }
+        else { await fsp.writeFile(path.join(DIRS.outbox, job.id + '.txt'), `From: ${job.msg.from}\nTo: ${job.msg.to}\nSubject: ${job.msg.subject}\n\n${job.msg.text}\n`); job.via = 'outbox'; }
+        job.sentAt = new Date().toISOString();
         await writeAtomic(path.join(DIRS.mailSent, f), JSON.stringify({ id: job.id, regId: job.regId, rq: job.rq, sentAt: job.sentAt, via: job.via, attempts: job.attempts, msg: { to: job.msg.to, subject: job.msg.subject } }));
         await fsp.unlink(p);
         if (job.rq) await afterRqSent(job).catch(e => console.error('[mail] cleanup failed', job.regId, e.message));
@@ -130,7 +165,7 @@ async function mailWorker() {
     }
   } catch (e) { console.error('[mail] worker', e); } finally { working = false; if (again) setImmediate(mailWorker); }
 }
-// a (re)start is a retry point: anything still pending (e.g. held while SMTP was missing) is tried straight away
+// a (re)start is a retry point: anything still pending (e.g. held while mail was not configured) is tried straight away
 for (const f of fs.readdirSync(DIRS.mailPending).filter(f => f.endsWith('.json'))) {
   try { const p = path.join(DIRS.mailPending, f), j = JSON.parse(fs.readFileSync(p)); if (j.nextAt) { j.nextAt = 0; fs.writeFileSync(p, JSON.stringify(j)); } } catch {}
 }
@@ -268,9 +303,9 @@ app.get('/admin', adminAuth, async (req, res) => {
   const [pend, failed] = await Promise.all([fsp.readdir(DIRS.mailPending), fsp.readdir(DIRS.mailFailed)]);
   const failedJobs = await Promise.all(failed.slice(-20).map(f => fsp.readFile(path.join(DIRS.mailFailed, f)).then(JSON.parse).catch(() => null)));
   const pendJobs = await Promise.all(pend.slice(0, 20).map(f => fsp.readFile(path.join(DIRS.mailPending, f)).then(JSON.parse).catch(() => null)));
-  const mailRows0 = [...failedJobs.filter(Boolean).map(j => ['FAILED', j]), ...pendJobs.filter(j => j && (j.attempts || j.held)).map(j => [j.held && !smtp ? 'HELD – no SMTP' : 'retrying', j])]
+  const mailRows0 = [...failedJobs.filter(Boolean).map(j => ['FAILED', j]), ...pendJobs.filter(j => j && (j.attempts || j.held)).map(j => [j.held && !mailConfigured ? 'HELD – no mail configured' : 'retrying', j])]
   ; const mailRows = mailRows0
-    .map(([s, j]) => `<tr><td>${s}</td><td>${esc(j.msg.to)}</td><td>${esc(j.msg.subject)}</td><td>${j.attempts}</td><td>${esc(j.errors.at(-1) || (j.held ? 'SMTP not configured' : ''))}</td></tr>`).join('');
+    .map(([s, j]) => `<tr><td>${s}</td><td>${esc(j.msg.to)}</td><td>${esc(j.msg.subject)}</td><td>${j.attempts}</td><td>${esc(j.errors.at(-1) || (j.held ? 'Mail not configured (set BREVO_API_KEY or SMTP_*)' : ''))}</td></tr>`).join('');
   const rows = recs.slice(0, 500).map(r => `<tr><td>${esc(brisbane(r.submittedAt))}</td><td>${esc(r.groupName)}</td><td>${esc(r.fullName)}${r.possibleDuplicateOf?.length ? ' <b style=color:#b00020>(possible duplicate)</b>' : ''}</td><td>${esc(r.email)}<br>${esc(r.phone)}</td><td>${esc(r.dob ? dmy(r.dob) : 'N/A')}</td><td><a href="/files/${r.id}?t=${tokenFor(r.id)}" target=_blank>View</a></td></tr>`).join('');
   const opts = CFG.groups.map(g => `<option value="${esc(g.id)}" ${g.id === req.query.group ? 'selected' : ''}>${esc(g.name)} (${all.filter(r => r.groupId === g.id).length})${g.managerEmail ? '' : ' – no manager email'}</option>`).join('');
   res.send(`<!doctype html><meta name=viewport content="width=device-width"><meta name=robots content=noindex><title>Registrations</title><link rel=stylesheet href="/style.css"><body class=admin>
@@ -279,7 +314,7 @@ app.get('/admin', adminAuth, async (req, res) => {
   <h1>${EMAIL_ONLY ? 'Waiting for delivery to RQ' : 'Registrations'} (${all.length})</h1>
   <form class=bar><select name=group><option value="">All groups</option>${opts}</select> <input type=text name=q placeholder="Search name or email" value="${esc(req.query.q || '')}"> <button class="btn sec">Filter</button></form>
   <p>Showing ${recs.length}${recs.length > 500 ? ' (first 500 listed)' : ''}. <a class="btn sec" href="/admin/export.csv?${qs}">Download CSV</a> <a class="btn sec" href="/admin/export.zip?${qs}">Download all files as ZIP</a></p>
-  <p>Email queue: ${pend.length} pending, ${failed.length} failed${smtp ? '' : ' (SMTP not configured – emails are logged to the outbox folder only)'}.</p>
+  <p>Email queue: ${pend.length} pending, ${failed.length} failed${mailConfigured ? '' : ' (BREVO_API_KEY / SMTP not configured – emails are logged to the outbox folder only)'}.</p>
   ${mailRows ? `<details open><summary>Email problems</summary><table><tr><th>Status</th><th>To</th><th>Subject</th><th>Attempts</th><th>Last error</th></tr>${mailRows}</table></details>` : ''}
   <div style="overflow-x:auto"><table><tr><th>Registered (Brisbane)</th><th>Group</th><th>Name</th><th>Contact</th><th>DOB</th><th>Files</th></tr>${rows || '<tr><td colspan=6>None</td></tr>'}</table></div>`);
 });
@@ -325,6 +360,6 @@ app.use((req, res) => res.status(404).send('<!doctype html><link rel=stylesheet 
 for (const f of fs.readdirSync(DIRS.tmp)) fs.rmSync(path.join(DIRS.tmp, f), { force: true });
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Ultimate Driver form on :${PORT} | data: ${DATA} | mode: ${EMAIL_ONLY ? 'EMAIL_ONLY (RQ inbox is the record; files deleted after RQ email sends)' : 'STORAGE (files kept on disk)'} | RQ: ${CFG.racingQueenslandEmail} | email: ${smtp ? 'SMTP ' + process.env.SMTP_HOST : 'NOT CONFIGURED'} | ${REGS.size} registrations on disk`);
-  if (!smtp) console.error('*** WARNING: SMTP_HOST is not set. RQ registration emails are HELD (not sent) and their files kept until SMTP is configured. ***');
+  console.log(`Ultimate Driver form on :${PORT} | data: ${DATA} | mode: ${EMAIL_ONLY ? 'EMAIL_ONLY (RQ inbox is the record; files deleted after RQ email sends)' : 'STORAGE (files kept on disk)'} | RQ: ${CFG.racingQueenslandEmail} | email: ${BREVO_API_KEY ? 'Brevo API' : smtp ? 'SMTP ' + process.env.SMTP_HOST : 'NOT CONFIGURED'} | ${REGS.size} registrations on disk`);
+  if (!mailConfigured) console.error('*** WARNING: neither BREVO_API_KEY nor SMTP_HOST is set. RQ registration emails are HELD (not sent) and their files kept until mail is configured. ***');
 });
